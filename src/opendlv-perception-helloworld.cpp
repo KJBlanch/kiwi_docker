@@ -97,6 +97,16 @@ int32_t main(int32_t argc, char **argv) {
             // Finally, we register our lambda for the message identifier for opendlv::proxy::DistanceReading.
             od4.dataTrigger(opendlv::proxy::DistanceReading::ID(), onDistance);
 
+
+            //Set Yellow/Blue values.
+            //opencv-cpp.blogspot.com/2016/10/object-detection-and-tracking-color-separation.html
+            int b_lowH = 220;
+            int b_highH = 250;
+            int b_lowS = 75;
+            int b_highS = 100;
+            int b_lowV = 50;
+            int b_highV = 100;
+
             // Endless loop; end the program by pressing Ctrl-C.
             while (od4.isRunning()) {
                 cv::Mat img;
@@ -125,20 +135,19 @@ int32_t main(int32_t argc, char **argv) {
                 }
                 sharedMemory->unlock();
 
-                double x_half = img.rows/2;
-                double x_10 = img.rows/10*20;
-                double height = img.cols*0.9;
-                double persp[] = { x_half, height };
+                double full_height = img.rows;
+                double full_width = img.cols;
 
-                std::cout << persp[0] << " " << persp[1] << std::endl;
-
+                std::cout << "Rows = " << full_height << ". Cols = " << full_width << std::endl;
+                
+               
 
 
                 // TODO: Do something with the frame.
 
                 // Invert colors
 
-                cv::bitwise_not(img, img);
+                
 
                 // Edge Detection (front)
 
@@ -149,16 +158,33 @@ int32_t main(int32_t argc, char **argv) {
                 //Cross link from R/L (Shortest distance)
 
                 //Build pathing at 1/4 from L
-                cv::Range rows (persp[0] - x_10, persp[0] + x_10);
-                cv::Range cols (persp[1] - 200, persp[1] + 10);
-                cv::Mat scan_region = img(rows, cols);
-                cv::rectangle(img, cv::Point(persp[0]-400, persp[1]-200), cv::Point(persp[0]+400, persp[1]+10), cv::Scalar(0,0,255));
+
+                
+               
+                cv::rectangle(img, cv::Point(0,full_height*0.55), cv::Point(full_width-1,full_height*0.9), cv::Scalar(0,0,255));
+                
+                cv::Mat scan_region = cv::Mat(img, cv::Rect(cv::Point(0,full_height*0.15), cv::Point(full_width-1,full_height*0.9)));
+                cv::Mat HSV_i;
+                cv::Mat threshIMG;
+                cv::cvtColor(scan_region, HSV_i, CV_BGR2HSV);
+
+                cv::inRange(scan_region, cv::Scalar(b_lowH, b_lowS, b_lowV), cv::Scalar(b_highH, b_highS, b_highV), threshIMG);
+                cv::GaussianBlur(threshIMG, threshIMG, cv::Size(3,3), 0);
+                cv::dilate(threshIMG, threshIMG, 0);
+                cv::erode(threshIMG, threshIMG, 0);
+                cv::Mat output_contour;
+                cv::Canny(threshIMG, output_contour, 100, 255);
+                
+                //cv::bitwise_not(scan_region, output_contour);
+                
+                
+                
                 bool break_ = false;
                 bool object_ = false;
 
                 // Display image., 
                 if (VERBOSE) {
-                    cv::imshow(sharedMemory->name().c_str(), scan_region);
+                    cv::imshow(sharedMemory->name().c_str(), output_contour);
                     cv::waitKey(1);
                 }
 

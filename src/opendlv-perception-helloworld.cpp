@@ -18,6 +18,7 @@
 #include "cluon-complete.hpp"
 #include "opendlv-standard-message-set.hpp"
 
+#include <opencv2/core/types.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
@@ -25,6 +26,24 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+
+double speed_calc (double front_distance) {
+    
+    double speed = 1;
+    
+
+    return (speed);
+}
+
+double object_det(cv::Mat scan_region) {
+    
+    
+    bool object = false;
+
+    
+    
+    return(object);
+}
 
 int32_t main(int32_t argc, char **argv) {
     int32_t retCode{1};
@@ -106,10 +125,14 @@ int32_t main(int32_t argc, char **argv) {
                 }
                 sharedMemory->unlock();
 
-                double x_half = img.cols/2;
-                double height = img.rows*0.9;
-                double persp[] = { x_half, height};
+                double x_half = img.rows/2;
+                double x_10 = img.rows/10*20;
+                double height = img.cols*0.9;
+                double persp[] = { x_half, height };
+
                 std::cout << persp[0] << " " << persp[1] << std::endl;
+
+
 
                 // TODO: Do something with the frame.
 
@@ -117,7 +140,7 @@ int32_t main(int32_t argc, char **argv) {
 
                 cv::bitwise_not(img, img);
 
-                // 
+                // Edge Detection (front)
 
                 //Build arrays for L/R
 
@@ -126,13 +149,16 @@ int32_t main(int32_t argc, char **argv) {
                 //Cross link from R/L (Shortest distance)
 
                 //Build pathing at 1/4 from L
-                
+                cv::Range rows (persp[0] - x_10, persp[0] + x_10);
+                cv::Range cols (persp[1] - 200, persp[1] + 10);
+                cv::Mat scan_region = img(rows, cols);
+                cv::rectangle(img, cv::Point(persp[0]-400, persp[1]-200), cv::Point(persp[0]+400, persp[1]+10), cv::Scalar(0,0,255));
+                bool break_ = false;
+                bool object_ = false;
 
-                cv::rectangle(img, cv::Point(persp[0]-10, persp[1]-10), cv::Point(persp[0]+10, persp[1]+10), cv::Scalar(0,0,255));
-
-                // Display image.
+                // Display image., 
                 if (VERBOSE) {
-                    cv::imshow(sharedMemory->name().c_str(), img);
+                    cv::imshow(sharedMemory->name().c_str(), scan_region);
                     cv::waitKey(1);
                 }
 
@@ -162,9 +188,28 @@ int32_t main(int32_t argc, char **argv) {
                 //gsr.groundSteering(0);
                 //od4.send(gsr);
 
+                //Sidewinder method;
+                if (object_) {
+                    double angle = 0.5;
+                    
+
+                }
+
                 // Uncomment the following lines to accelerate/decelerate; range: +0.25 (forward) .. -1.0 (backwards).
                 // Be careful!
-                //opendlv::proxy::PedalPositionRequest ppr;
+                if (front < 0.5) {
+                    break_ = true;
+                    //Need start sequence
+                }
+                
+                opendlv::proxy::PedalPositionRequest ppr;
+                if (break_) {
+                    ppr.position(0);
+                } else {
+                    ppr.position(speed_calc(front));
+                }
+
+                
                 //ppr.position(0);
                 //od4.send(ppr);
             }
